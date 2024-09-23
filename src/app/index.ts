@@ -11,6 +11,8 @@ import { queueLyrics } from "./mxm";
 let server: Server | undefined;
 const oscClient = new Client(config.OSC_TARGET_ADDRESS, config.OSC_TARGET_PORT);
 const storage = createStorage();
+let called: boolean;
+let song: SpotifyApi.TrackObjectFull | undefined = undefined;
 
 const setupApp = async () => {
   const spotifyApi = new SpotifyWebApi({
@@ -110,7 +112,8 @@ const startListening = async (
       }
 
       if (item && item.id !== currentSong) {
-        log(`${os.EOL}Now playing: ${item.name}`);
+        called = true;
+        log(`${os.EOL}Now playing: ${item.name} - by ${item.artists[0].name}`);
 
         if (config.LISTENING_SONG_PARAMETER) {
           oscClient.send(
@@ -131,6 +134,7 @@ const startListening = async (
           currentLyrics = await queueLyrics(progress_ms, item, oscClient);
         }
         currentSong = item.id;
+        song = item;
         oscClient.send(
           new Message(
             "/chatbox/input",
@@ -144,7 +148,30 @@ const startListening = async (
       log(`Failed fetching song. ${err}`);
     }
   }, 1000);
+  await timedMessage(currentSong);
 };
+
+ function sendOscMsg(item: SpotifyApi.TrackObjectFull | undefined, currentSong: string | undefined){
+    if((item && item.id && currentSong) === currentSong){
+      oscClient.send(
+        new Message(
+          "/chatbox/input",
+          `(🎵) ${item?.name} by ${item?.artists[0].name}`,
+          true,
+          false
+        )
+      );
+      log(`(🎵) ${item?.name} by ${item?.artists[0].name}`);
+    }
+  }
+
+  async function timedMessage(currentSong: string|undefined){
+    setInterval(async () => {
+      if(song){
+        sendOscMsg(song, currentSong);
+      }
+    }, 120*1000);
+  }
 
 const refreshToken = async (spotifyApi: SpotifyWebApi) => {
   try {
