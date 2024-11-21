@@ -111,7 +111,7 @@ const startListening = async (
         return;
       }
 
-      if (item && item.id !== currentSong) {
+      if (item && item.id !== currentSong && is_playing) {
         called = true;
         log(`${os.EOL}Now playing: ${item.name} - by ${item.artists[0].name}`);
 
@@ -170,7 +170,7 @@ const startListening = async (
       if(song){
         sendOscMsg(song, currentSong);
       }
-    }, 120*1000);
+    }, 240*1000);
   }
 
 const refreshToken = async (spotifyApi: SpotifyWebApi) => {
